@@ -32,6 +32,8 @@ int main()
 
     char message[256];
 
+    // Setting up socket structures and connecting to the server
+
     sockFD = socket(AF_INET, SOCK_STREAM, 0);
     addr.sin_family = AF_INET;
     addr.sin_port = htons(SERVER_LISTENING_PORT);
@@ -41,9 +43,93 @@ int main()
 
     while (1)
     {
-        int sec = (random() % 10) + 1;
-        sleep(sec);
-        sprintf(message, "Hello Server, I'm client!\n");
-        write(sockFD, message, strlen(message));
+        char requestType[4];
+        char keyInput[300];
+        char valueInput[300];
+
+        // Asking the client what type of operation it wants to perform
+        printf("Enter request type: ");
+        scanf("%s", requestType);
+
+        if (strlen(requestType) == 3)
+        {
+            /* Checking whether the user has made one of the valid requests (i.e. GET, PUT or DEL)
+             * and handling each of these requests */
+            if (strcmp(requestType, "GET") == 0)
+            {
+                printf("Enter the key: ");
+                scanf("%s", keyInput);
+
+                // If the user enters a key longer than 256 characters
+                if (strlen(keyInput) > 256)
+                {
+                    // Displaying the appropriate error message
+                    printf("Key should be less than or equal to 256 characters.\n");
+                }
+                else
+                {
+                    // Using the GET function of KVClientLibrary to request the corresponding value
+                    char *serverResponse = GET(keyInput);
+                    printf("Value: %s", serverResponse);
+                    free(serverResponse);
+                }
+            }   
+            else if (strcmp(requestType, "PUT") == 0)
+            {
+                printf("Enter the key: ");
+                scanf("%s", keyInput);
+
+                // If the user enters a key longer than 256 characters
+                if (strlen(keyInput) > 256)
+                {
+                    // Displaying the appropriate error message
+                    printf("Key should be less than or equal to 256 characters.\n");
+                }
+                else
+                {
+                    printf("Enter the value: ");
+                    scanf("%s", valueInput);
+
+                    // If the user enters a value longer than 256 characters
+                    if (strlen(valueInput) > 256)
+                    {
+                        // Displaying the appropriate error message
+                        printf("Value should be less than or equal to 256 characters.\n");
+                    }
+                    else
+                    {
+                        // Using the PUT function of KVClientLibrary to insert/update the key-value pair
+                        PUT(keyInput, valueInput);
+                    }
+                }
+            }         
+            else if (strcmp(requestType, "DEL") == 0)
+            {
+                printf("Enter the key: ");
+                scanf("%s", keyInput);
+
+                // If the user enters a key longer than 256 characters
+                if (strlen(keyInput) > 256)
+                {
+                    // Displaying the appropriate error message
+                    printf("Key should be less than or equal to 256 characters.\n");
+                }
+                else
+                {
+                    // Using the DEL function of KVClientLibrary to remove the key-value pair
+                    DEL(keyInput);
+                }
+            }
+            else
+            {
+                // Invalid request type
+                printf("Invalid request type!\n");
+            }
+        }
+        else
+        {
+            // Invalid request type
+            printf("Invalid request type!");
+        }
     }
 }
