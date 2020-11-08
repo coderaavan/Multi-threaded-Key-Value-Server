@@ -61,7 +61,7 @@ int main()
                 scanf("%s", keyInput);
 
                 // If the user enters a key longer than 256 characters
-                if (strlen(keyInput) > 256)
+                if (strlen(keyInput) > KEY_VALUE_MAX_LENGTH)
                 {
                     // Displaying the appropriate error message
                     printf("Key should be less than or equal to 256 characters.\n");
@@ -70,7 +70,7 @@ int main()
                 {
                     // Using the GET function of KVClientLibrary to request the corresponding value
                     char *serverResponse = GET(keyInput);
-                    printf("Value: %s", serverResponse);
+                    printf("\n%s\n", serverResponse);
                     free(serverResponse);
                 }
             }   
@@ -80,7 +80,7 @@ int main()
                 scanf("%s", keyInput);
 
                 // If the user enters a key longer than 256 characters
-                if (strlen(keyInput) > 256)
+                if (strlen(keyInput) > KEY_VALUE_MAX_LENGTH)
                 {
                     // Displaying the appropriate error message
                     printf("Key should be less than or equal to 256 characters.\n");
@@ -91,7 +91,7 @@ int main()
                     scanf("%s", valueInput);
 
                     // If the user enters a value longer than 256 characters
-                    if (strlen(valueInput) > 256)
+                    if (strlen(valueInput) > KEY_VALUE_MAX_LENGTH)
                     {
                         // Displaying the appropriate error message
                         printf("Value should be less than or equal to 256 characters.\n");
@@ -109,7 +109,7 @@ int main()
                 scanf("%s", keyInput);
 
                 // If the user enters a key longer than 256 characters
-                if (strlen(keyInput) > 256)
+                if (strlen(keyInput) > KEY_VALUE_MAX_LENGTH)
                 {
                     // Displaying the appropriate error message
                     printf("Key should be less than or equal to 256 characters.\n");
@@ -129,7 +129,7 @@ int main()
         else
         {
             // Invalid request type
-            printf("Invalid request type!");
+            printf("Invalid request type!\n");
         }
     }
 }
