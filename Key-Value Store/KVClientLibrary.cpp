@@ -15,10 +15,10 @@ char *GET(char *key)
     // The first byte of the request message will be status code
     requestMessage[0] = GET_STATUS_CODE;
 
-    // This will point to the location where the key value will be inserted in our request message
+    // This will point to the location where the 'key' will be inserted in our request message
     char *keyInRequestMessage = &requestMessage[1];
 
-    // Copying the key value to the request message
+    // Copying the 'key' to the request message
     strcpy(keyInRequestMessage, key);
 
     // Sending the GET request to the server
@@ -69,10 +69,86 @@ char *GET(char *key)
 
 void PUT(char *key, char *value)
 {
-    // TODO
+    char requestMessage[MESSAGE_LENGTH];
+    char responseMessage[MESSAGE_LENGTH];
+
+    // This is done to make the padding process easy
+    for (int i = 0; i < MESSAGE_LENGTH; i++)
+    {
+        requestMessage[i] = '\0';
+    }
+
+    // The first byte of the request message will be status code
+    requestMessage[0] = PUT_STATUS_CODE;
+
+    // This will point to the location where the 'key' will be inserted in our request message
+    char *keyInRequestMessage = &requestMessage[1];
+
+    // Copying the 'key' to the request message
+    strcpy(keyInRequestMessage, key);
+
+    // This will point to the location where the 'value' will be inserted in our request message
+    char *valueInRequestMessage = &requestMessage[257];
+
+    // Copying the 'value' to the request message
+    strcpy(valueInRequestMessage, value);
+
+    // Sending the PUT request to the server
+    int n = write(sockFD, requestMessage, MESSAGE_LENGTH);
+
+    // Receiving the response from the server
+    int m = read(sockFD, responseMessage, MESSAGE_LENGTH);
+
+    // Decoding the response by first checking the status code
+    int statusCode = responseMessage[0] & 255;
+
+    // The server returns success status code (200) on successful insertion 
+    if (statusCode == SUCCESS_STATUS_CODE)
+    {
+        fprintf(stdin, "Successfully inserted the key-value pair!\n");
+    }
+    else
+    {
+        fprintf(stdin, "Unexpected error occurred during insertion!\n");
+    }
 }
 
 void DEL(char *key)
 {
-    // TODO
+    char requestMessage[MESSAGE_LENGTH];
+    char responseMessage[MESSAGE_LENGTH];
+
+    // This is done to make the padding process easy
+    for (int i = 0; i < MESSAGE_LENGTH; i++)
+    {
+        requestMessage[i] = '\0';
+    }
+
+    // The first byte of the request message will be status code
+    requestMessage[0] = DEL_STATUS_CODE;
+
+    // This will point to the location where the 'key' will be inserted in our request message
+    char *keyInRequestMessage = &requestMessage[1];
+
+    // Copying the 'key' to the request message
+    strcpy(keyInRequestMessage, key);
+
+    // Sending the DEL request to the server
+    int n = write(sockFD, requestMessage, MESSAGE_LENGTH);
+
+    // Receiving the response from the server
+    int m = read(sockFD, responseMessage, MESSAGE_LENGTH);
+
+    // Decoding the response by first checking the status code
+    int statusCode = responseMessage[0] & 255;
+
+    // The server returns success status code (200) on successful insertion 
+    if (statusCode == SUCCESS_STATUS_CODE)
+    {
+        fprintf(stdin, "Successfully deleted the key-value pair!\n");
+    }
+    else
+    {
+        fprintf(stdin, "DEL Error: Key was not present in the storage!\n");
+    }
 }
