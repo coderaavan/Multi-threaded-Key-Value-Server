@@ -12,11 +12,25 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <map>
+#include <string>
 
 using namespace std;
 
+// States codes for GET, PUT and DEL requests as well as for SUCCESS and ERROR responses
+enum STATUS_CODES {GET_STATUS_CODE = 1, PUT_STATUS_CODE = 2, DEL_STATUS_CODE = 3, SUCCESS_STATUS_CODE = 200, ERROR_STATUS_CODE = 240};
+
 // Defining the name of server configuration file
 #define SERVER_CONFIG_FILE "server.config"
+
+// Message length (in bytes)
+#define MESSAGE_LENGTH 513
+
+// Key/Value maximum length (in bytes)
+#define KEY_VALUE_MAX_LENGTH 256
+
+// Key-Value Storage
+map<string, string> keyValueCache;
 
 // This structure defines the information a worker thread needs about a client
 typedef struct client_info
@@ -54,7 +68,8 @@ void *worker_thread(void *workerArgs)
 {
     struct worker_args *workerThreadArgs = (struct worker_args *) workerArgs;
     int positionInQueueVector = workerThreadArgs->pendingRequestsQueueIndex;
-    char buffer[256]; // For testing
+    char buffer[MESSAGE_LENGTH]; 
+
     // Setting up epoll context
     struct epoll_event events[THREAD_QUEUE_SIZE];
 
@@ -66,7 +81,6 @@ void *worker_thread(void *workerArgs)
         while (!pendingRequestsQueue[positionInQueueVector].empty())
         {
             static struct epoll_event ev;
-            printf("Thead %d adding one more...\n", positionInQueueVector);
             // Reading then connection info from the queue
             ClientInfo *tempInfo = pendingRequestsQueue[positionInQueueVector].front();
             ev.data.fd = tempInfo->connectionFD;
@@ -77,15 +91,12 @@ void *worker_thread(void *workerArgs)
             pendingRequestsQueue[positionInQueueVector].erase(pendingRequestsQueue[positionInQueueVector].begin());
         }
 
-        // Deleting all the entries from pending queue
-        pendingRequestsQueue[positionInQueueVector].clear();
-
         int nfds = epoll_wait(ePollFD, events, THREAD_QUEUE_SIZE, NULL);
 
         for (int i = 0; i < nfds; i++)
         {
-            memset(buffer, 0, 256);
-            int n = read(events[i].data.fd, buffer, 256);
+            memset(buffer, 0, MESSAGE_LENGTH);
+            int n = read(events[i].data.fd, buffer, MESSAGE_LENGTH);
             
             if (n == 0)
             {
@@ -93,9 +104,147 @@ void *worker_thread(void *workerArgs)
                 close(events[i].data.fd);
                 continue;
             }   
+            else
+            {
+                char responseMessage[MESSAGE_LENGTH];
 
-            printf("[Thread %d]  [Client %d]\n", positionInQueueVector, events[i].data.fd);
-            puts(buffer);
+                // This is done to make the padding process easy
+                for (int j = 0; j < MESSAGE_LENGTH; j++)
+                {
+                    responseMessage[j] = '\0';
+                }
+
+                // Fetching the status code from the request message
+                int statusCode = buffer[0] & 255;
+                
+                if (statusCode == GET_STATUS_CODE)
+                {
+                    // This means that the request is a 'GET' request
+
+                    char key[KEY_VALUE_MAX_LENGTH + 1];
+                    key[KEY_VALUE_MAX_LENGTH] = '\0';
+
+                    // Fetching key from the request message stored in the buffer
+                    for (int j = 0; j < KEY_VALUE_MAX_LENGTH; j++)
+                    {
+                        key[j] = buffer[j + 1];
+                    }
+                    
+                    string keyString(key);
+
+                    // Checking whether the key exists in the storage or not
+                    if (keyValueCache.count(keyString) > 0)
+                    {
+                        // This means that the key exists in the storage, so we send the corresponding value
+                        responseMessage[0] = SUCCESS_STATUS_CODE;      
+
+                        // Fetching the value corresponding to the key from the map
+                        string valueString = keyValueCache[keyString];
+
+                        for (int j = 0; j < valueString.length(); j++)
+                        {
+                            responseMessage[KEY_VALUE_MAX_LENGTH + 1 + j] = valueString.at(j);
+                        }
+
+                        // Sending the response to the client
+                        int m = write(events[i].data.fd, responseMessage, MESSAGE_LENGTH);
+                    }
+                    else
+                    {
+                        // If the key doesn't exist, then send a response indicating error
+                        responseMessage[0] = ERROR_STATUS_CODE;
+
+                        // Sending the response to the client indicating that an error has occurred
+                        int m = write(events[i].data.fd, responseMessage, MESSAGE_LENGTH);
+                    }
+                }
+                else if (statusCode == PUT_STATUS_CODE)
+                {
+                    // This means that the request is a 'PUT' request
+
+                    char key[KEY_VALUE_MAX_LENGTH + 1];
+                    char value[KEY_VALUE_MAX_LENGTH + 1];
+                    key[KEY_VALUE_MAX_LENGTH] = '\0';
+                    value[KEY_VALUE_MAX_LENGTH] = '\0';
+
+                    // Fetching key from the request message stored in the buffer
+                    for (int j = 0; j < KEY_VALUE_MAX_LENGTH; j++)
+                    {
+                        key[j] = buffer[j + 1];
+                    }
+                    
+                    // Fetching value from the request message stored in the buffer
+                    for (int j = 0; j < KEY_VALUE_MAX_LENGTH; j++)
+                    {
+                        value[j] = buffer[KEY_VALUE_MAX_LENGTH + 1 + j];
+                    }
+
+                    string keyString(key);
+                    string valueString(value);
+
+                    // Checking whether the key already exists in the storage or not
+                    if (keyValueCache.count(keyString) > 0)
+                    {
+                        // Key exists in the storage, so just update its corresponding value
+                        keyValueCache[keyString] = valueString;
+                    }
+                    else
+                    {
+                        // Key doesn't exist in the storage, so store the new key-value pair
+                        keyValueCache.insert({keyString, valueString});
+                    }
+                    
+                    // Indicating successful insertion/updation in our response message
+                    responseMessage[0] = SUCCESS_STATUS_CODE;
+
+                    // Sending the response to the client
+                    int m = write(events[i].data.fd, responseMessage, MESSAGE_LENGTH);
+                }
+                else if (statusCode == DEL_STATUS_CODE)
+                {
+                    // This means that the request is a 'DEL' request
+
+                    char key[KEY_VALUE_MAX_LENGTH + 1];
+                    key[KEY_VALUE_MAX_LENGTH] = '\0';
+
+                    // Fetching key from the request message stored in the buffer
+                    for (int j = 0; j < KEY_VALUE_MAX_LENGTH; j++)
+                    {
+                        key[j] = buffer[j + 1];
+                    }
+                    
+                    string keyString(key);
+
+                    // Checking whether the key exists in the storage or not
+                    if (keyValueCache.count(keyString) > 0)
+                    {
+                        // Removing the key-value pair from the storage
+                        keyValueCache.erase(keyString);
+
+                        // Indicates that the deletion is successful in response message
+                        responseMessage[0] = SUCCESS_STATUS_CODE;      
+
+                        // Sending the response to the client
+                        int m = write(events[i].data.fd, responseMessage, MESSAGE_LENGTH);
+                    }
+                    else
+                    {
+                        // If the key doesn't exist, then send a response indicating error
+                        responseMessage[0] = ERROR_STATUS_CODE;
+
+                        // Sending the response to the client indicating that an error has occurred
+                        int m = write(events[i].data.fd, responseMessage, MESSAGE_LENGTH);
+                    }
+                }
+                else
+                {
+                    // Invalid request
+                    responseMessage[0] = ERROR_STATUS_CODE;
+
+                    // Sending the response to the client indicating that an error has occurred
+                    int m = write(events[i].data.fd, responseMessage, MESSAGE_LENGTH);
+                }
+            }
         }
     }
 }
