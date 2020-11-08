@@ -15,7 +15,7 @@
 
 using namespace std;
 
-// States codes for GET, PUT and DEL requests as well as SUCCESS and ERROR responses
+// States codes for GET, PUT and DEL requests as well as for SUCCESS and ERROR responses
 enum STATUS_CODES {GET_STATUS_CODE = 1, PUT_STATUS_CODE = 2, DEL_STATUS_CODE = 3, SUCCESS_STATUS_CODE = 200, ERROR_STATUS_CODE = 240};
 
 // Message length (in bytes)
