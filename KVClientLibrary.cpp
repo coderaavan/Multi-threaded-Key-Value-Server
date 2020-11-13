@@ -102,14 +102,16 @@ void PUT(char *key, char *value)
     // Decoding the response by first checking the status code
     int statusCode = responseMessage[0] & 255;
 
+    
     // The server returns success status code (200) on successful insertion 
     if (statusCode == SUCCESS_STATUS_CODE)
     {
-        fprintf(stdin, "Successfully inserted the key-value pair!\n");
+        printf("Successfully inserted the key-value pair!\n");
     }
     else
     {
-        fprintf(stdin, "Unexpected error occurred during insertion!\n");
+        // If insertion fails, the server returns error status code (240)
+        printf("Unexpected error occurred during insertion!\n");
     }
 }
 
@@ -142,13 +144,15 @@ void DEL(char *key)
     // Decoding the response by first checking the status code
     int statusCode = responseMessage[0] & 255;
 
-    // The server returns success status code (200) on successful insertion 
+    
+    // The server returns success status code (200) on successful deletion 
     if (statusCode == SUCCESS_STATUS_CODE)
     {
-        fprintf(stdin, "Successfully deleted the key-value pair!\n");
+        printf("Successfully deleted the key-value pair!\n");
     }
     else
     {
-        fprintf(stdin, "DEL Error: Key was not present in the storage!\n");
+        // The server returns error status code (240) if the key was not present in the storage
+        printf("DEL Error: Key was not present in the storage!\n");
     }
 }
